@@ -4,70 +4,92 @@ function ProblemSelectionStep({ estimateData, updateEstimateData, onNext }) {
   const [selectedProblem, setSelectedProblem] = useState(estimateData.problem || '')
   const [customProblem, setCustomProblem] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [expandedCategory, setExpandedCategory] = useState(null)
 
   const commonProblems = [
     {
-      category: "Central Air Conditioning",
+      category: "Cooling Issues",
       icon: "❄️",
+      description: "Problems with air conditioning systems",
       problems: [
         "AC not cooling at all",
         "AC making strange noises", 
         "AC not turning on",
         "Weak air flow from vents",
         "AC running constantly",
+        "AC freezing up",
+        "Water leaking from AC unit",
+        "Thermostat not working with AC"
+      ]
+    },
+    {
+      category: "Heating Issues",
+      icon: "🔥",
+      description: "Problems with heating systems",
+      problems: [
+        "Furnace not heating",
+        "Heater making strange noises",
+        "No heat coming from vents",
+        "Pilot light won't stay lit",
+        "Heating system blowing cold air",
+        "High heating bills",
+        "Uneven heating throughout house"
+      ]
+    },
+    {
+      category: "Installation Services",
+      icon: "🛠️",
+      description: "New system installation requests",
+      problems: [
         "Want new AC installed",
-        "Annual AC maintenance"
-      ]
-    },
-    {
-      category: "Mini Split Systems",
-      icon: "🌬️",
-      problems: [
-        "Mini split not cooling",
-        "Mini split leaking water",
-        "Mini split not turning on", 
+        "Want new heating system installed",
         "Want mini split installed",
-        "Mini split maintenance"
+        "Want slim ductless installed",
+        "Need rooftop unit installation",
+        "Want air handler installed",
+        "Complete HVAC system replacement",
+        "Ductwork installation needed"
       ]
     },
     {
-      category: "Slim Ductless",
-      icon: "💨",
-      problems: [
-        "Slim unit not working",
-        "Slim unit making noise",
-        "Want slim unit installed",
-        "Slim unit maintenance"
-      ]
-    },
-    {
-      category: "Rooftop Units",
-      icon: "🏢",
-      problems: [
-        "Rooftop unit not cooling",
-        "Rooftop unit making loud noises",
-        "Need new rooftop unit",
-        "Rooftop unit maintenance"
-      ]
-    },
-    {
-      category: "Air Handlers",
-      icon: "⚙️",
-      problems: [
-        "Air handler not working",
-        "Air handler making strange sounds",
-        "Want new air handler",
-        "Air handler maintenance"
-      ]
-    },
-    {
-      category: "General Issues",
+      category: "Maintenance & Repair",
       icon: "🔧",
+      description: "Regular maintenance and repair needs",
+      problems: [
+        "Annual AC maintenance",
+        "Annual heating maintenance",
+        "System tune-up needed",
+        "Emergency repair needed",
+        "Preventive maintenance",
+        "Seasonal maintenance",
+        "Filter replacement needed",
+        "Duct cleaning required"
+      ]
+    },
+    {
+      category: "Air Quality & Efficiency",
+      icon: "🌬️",
+      description: "Air quality and energy efficiency concerns",
       problems: [
         "Poor air quality",
         "High energy bills",
         "Strange smells from vents",
-        "System not heating",
+        "Excessive dust in home",
+        "Humidity problems",
+        "Air purifier installation",
+        "Ventilation issues",
+        "Indoor air quality testing"
+      ]
+    },
+    {
+      category: "Other Issues",
+      icon: "❓",
+      description: "Other HVAC-related problems",
+      problems: [
+        "Thermostat problems",
+        "Electrical issues with HVAC",
+        "Noise complaints",
+        "System not responding",
         "Custom problem"
       ]
     }
@@ -121,21 +143,30 @@ function ProblemSelectionStep({ estimateData, updateEstimateData, onNext }) {
       <div className="problems-grid">
         {filteredProblems.map((category) => (
           <div key={category.category} className="problem-category">
-            <div className="category-header">
+            <div 
+              className="category-header clickable"
+              onClick={() => setExpandedCategory(expandedCategory === category.category ? null : category.category)}
+            >
               <span className="category-icon">{category.icon}</span>
-              <h4>{category.category}</h4>
+              <div className="category-title">
+                <h4>{category.category}</h4>
+                <p className="category-description">{category.description}</p>
+              </div>
+              <span className="expand-icon">{expandedCategory === category.category ? '▼' : '▶'}</span>
             </div>
-            <div className="category-problems">
-              {category.problems.map((problem) => (
-                <button
-                  key={problem}
-                  className={`problem-option ${selectedProblem === problem ? 'selected' : ''}`}
-                  onClick={() => handleProblemSelect(problem)}
-                >
-                  {problem}
-                </button>
-              ))}
-            </div>
+            {expandedCategory === category.category && (
+              <div className="category-problems">
+                {category.problems.map((problem) => (
+                  <button
+                    key={problem}
+                    className={`problem-option ${selectedProblem === problem ? 'selected' : ''}`}
+                    onClick={() => handleProblemSelect(problem)}
+                  >
+                    {problem}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

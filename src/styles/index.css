@@ -878,20 +878,54 @@ main {
 .category-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem;
+  gap: 1rem;
+  padding: 1.5rem;
   background: var(--light-gray);
   border-bottom: 1px solid var(--light-gray);
 }
 
-.category-icon {
-  font-size: 1.5rem;
+.category-header.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
 }
 
-.category-header h4 {
+.category-header.clickable:hover {
+  background: #e5e7eb;
+}
+
+.category-header.clickable:active {
+  background: #d1d5db;
+}
+
+.category-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.category-title {
+  flex: 1;
+}
+
+.category-title h4 {
   margin: 0;
   color: var(--primary-color);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.category-description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.expand-icon {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
 }
 
 .category-problems {
