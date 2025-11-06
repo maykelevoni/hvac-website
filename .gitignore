@@ -26,5 +26,13 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Testing
+tests/
+test-results/
+playwright-report/
+playwright/.cache/
+test-admin-ux.js
 
+# Supabase
+supabase/.temp/
 
