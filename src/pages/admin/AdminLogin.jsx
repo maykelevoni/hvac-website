@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import bcrypt from 'bcryptjs'
 
@@ -267,6 +267,9 @@ function AdminLogin() {
                 <button type="submit" className="submit-button" disabled={loading}>
                   {loading ? 'Logging in...' : 'Login'}
                 </button>
+                <div className="forgot-password-link">
+                  <Link to="/admin/forgot-password">Forgot your password?</Link>
+                </div>
               </form>
             </>
           )}

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState } from 'react'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -8,6 +8,8 @@ import Pricing from './pages/Pricing'
 import EstimateModal from './components/EstimateModal/EstimateModal'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import ForgotPassword from './pages/admin/ForgotPassword'
+import ResetPassword from './pages/admin/ResetPassword'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/AdminLayout'
 
@@ -19,7 +21,10 @@ function App() {
       <div className="app">
         <Routes>
           {/* Admin routes - Must come FIRST */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/forgot-password" element={<ForgotPassword />} />
+          <Route path="/admin/reset-password" element={<ResetPassword />} />
           <Route
             path="/admin/*"
             element={
