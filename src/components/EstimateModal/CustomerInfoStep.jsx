@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-function CustomerInfoStep({ estimateData, updateEstimateData, onNext, onPrev }) {
+function CustomerInfoStep({ estimateData, updateEstimateData, onNext, onPrev, addUserMessage, addBotMessage }) {
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -8,12 +8,22 @@ function CustomerInfoStep({ estimateData, updateEstimateData, onNext, onPrev }) 
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [autoSubmitTimer, setAutoSubmitTimer] = useState(null)
 
   useEffect(() => {
     if (estimateData.customerInfo) {
       setCustomerInfo(estimateData.customerInfo)
     }
   }, [estimateData.customerInfo])
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSubmitTimer) {
+        clearTimeout(autoSubmitTimer)
+      }
+    }
+  }, [autoSubmitTimer])
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -53,19 +63,27 @@ function CustomerInfoStep({ estimateData, updateEstimateData, onNext, onPrev }) 
 
   const handleInputChange = (field, value) => {
     setCustomerInfo(prev => ({ ...prev, [field]: value }))
-    
+
+    // Clear field error immediately
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
-    
-    // Check if form is complete and valid for auto-advance
-    setTimeout(() => {
+
+    // Clear previous timer
+    if (autoSubmitTimer) {
+      clearTimeout(autoSubmitTimer)
+    }
+
+    // Debounce auto-submit check to prevent race conditions
+    const timer = setTimeout(() => {
       const updatedInfo = { ...customerInfo, [field]: value }
       const isValid = checkFormAutoSubmit(updatedInfo)
-      if (isValid) {
-        handleSubmit({ preventDefault: () => {} })
+      if (isValid && !isSubmitting) {
+        handleAutoSubmit(updatedInfo)
       }
-    }, 100)
+    }, 800) // Increased debounce time to 800ms
+
+    setAutoSubmitTimer(timer)
   }
 
   const formatPhoneNumber = (value) => {
@@ -82,19 +100,40 @@ function CustomerInfoStep({ estimateData, updateEstimateData, onNext, onPrev }) 
     handleInputChange('phone', formatted)
   }
 
+  const handleAutoSubmit = async (info) => {
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      updateEstimateData({ customerInfo: info })
+      if (addUserMessage) {
+        addUserMessage('Shared contact info')
+      }
+      onNext()
+    } catch (error) {
+      console.error('Error auto-submitting form:', error)
+      setIsSubmitting(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
 
     setIsSubmitting(true)
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await new Promise(resolve => setTimeout(resolve, 500))
+
       updateEstimateData({ customerInfo })
+      if (addUserMessage) {
+        addUserMessage('Shared contact info')
+      }
       onNext()
     } catch (error) {
       console.error('Error submitting form:', error)
@@ -179,6 +218,10 @@ function CustomerInfoStep({ estimateData, updateEstimateData, onNext, onPrev }) 
             className={errors.phone ? 'error' : ''}
           />
           {errors.phone && <span className="error-message">{errors.phone}</span>}
+        </div>
+
+        <div className="consent-info-box">
+          <p>ℹ️ By providing your phone number, you authorize us to contact you regarding your service request.</p>
         </div>
 
         <div className="privacy-notice">

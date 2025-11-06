@@ -1,13 +1,69 @@
 import React, { useState, useEffect } from 'react'
+import { supabase } from '../../lib/supabase'
+import { BUSINESS_INFO } from '../../config/business'
 
 function EstimateResultsStep({ estimateData, onClose, onRestart }) {
   const [estimateId, setEstimateId] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [leadSaved, setLeadSaved] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  const calculateFinalPrice = () => {
+    if (!estimateData.service || !estimateData.service.service) return estimateData.service?.service?.priceRange || 'Contact for pricing'
+    
+    const basePriceRange = estimateData.service.service.priceRange
+    const multiplier = estimateData.service.service.urgencyMultiplier[estimateData.service.urgency]
+    
+    const extractNumbers = (priceStr) => {
+      const matches = priceStr.match(/\$?(\d+)/g)
+      return matches ? matches.map(num => parseInt(num.replace('$', ''))) : [0, 0]
+    }
+    
+    const [min, max] = extractNumbers(basePriceRange)
+    const newMin = Math.round(min * multiplier)
+    const newMax = Math.round(max * multiplier)
+    return `$${newMin} - $${newMax}`
+  }
 
   useEffect(() => {
     setEstimateId(`EST-${Date.now().toString(36).toUpperCase()}`)
+    saveLeadToDatabase()
   }, [])
+
+  const saveLeadToDatabase = async () => {
+    try {
+      const priceEstimate = calculateFinalPrice()
+      
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([{
+          name: estimateData.customerInfo?.name || '',
+          email: estimateData.customerInfo?.email || '',
+          phone: estimateData.customerInfo?.phone || '',
+          problem: estimateData.problem || '',
+          service: estimateData.service || null,
+          urgency: estimateData.service?.urgency || 'normal',
+          price_estimate: priceEstimate,
+          contact_preference: estimateData.contactPreference || 'wait',
+          status: 'new',
+          consent_given: true
+        }])
+        .select()
+
+      if (error) {
+        console.error('Error saving lead:', error)
+        setSaveError(error.message)
+      } else {
+        setLeadSaved(true)
+        // Trigger email notification (placeholder for now)
+        // sendNotificationEmail(data[0])
+      }
+    } catch (error) {
+      console.error('Error saving lead:', error)
+      setSaveError(error.message)
+    }
+  }
 
   const sendEstimateEmail = async () => {
     setIsSending(true)
@@ -40,23 +96,6 @@ function EstimateResultsStep({ estimateData, onClose, onRestart }) {
       case 'scheduled': return 'Scheduled'
       default: return 'Normal'
     }
-  }
-
-  const calculateFinalPrice = () => {
-    if (!estimateData.service || !estimateData.service.service) return estimateData.service?.service?.priceRange || 'Contact for pricing'
-    
-    const basePriceRange = estimateData.service.service.priceRange
-    const multiplier = estimateData.service.service.urgencyMultiplier[estimateData.service.urgency]
-    
-    const extractNumbers = (priceStr) => {
-      const matches = priceStr.match(/\$?(\d+)/g)
-      return matches ? matches.map(num => parseInt(num.replace('$', ''))) : [0, 0]
-    }
-    
-    const [min, max] = extractNumbers(basePriceRange)
-    const newMin = Math.round(min * multiplier)
-    const newMax = Math.round(max * multiplier)
-    return `$${newMin} - $${newMax}`
   }
 
   return (
@@ -178,15 +217,48 @@ function EstimateResultsStep({ estimateData, onClose, onRestart }) {
 
       <div className="contact-options">
         <h4>Need to Contact Us Now?</h4>
-        <div className="contact-buttons">
-          <a href="tel:9083612183" className="contact-phone-btn">
-            📞 Call: (908) 361-2183
-          </a>
-          <a href="mailto:Mafairhvac@gmail.com" className="contact-email-btn">
-            ✉️ Email: Mafairhvac@gmail.com
-          </a>
-        </div>
+        {estimateData.contactPreference === 'phone' && (
+          <div className="contact-buttons">
+            <a href={`tel:${BUSINESS_INFO.phone.primary}`} className="contact-phone-btn">
+              📞 Call Us Now: {BUSINESS_INFO.phone.primaryFormatted}
+            </a>
+          </div>
+        )}
+        {estimateData.contactPreference === 'email' && (
+          <div className="contact-buttons">
+            <a href={`mailto:${BUSINESS_INFO.email.primary}?subject=Service Request from ${estimateData.customerInfo?.name || 'Customer'}&body=Hi, I submitted a service request. Please contact me at ${estimateData.customerInfo?.email || ''}`} className="contact-email-btn">
+              ✉️ Email Us Now
+            </a>
+          </div>
+        )}
+        {estimateData.contactPreference === 'wait' && (
+          <div className="contact-wait-message">
+            <p>✅ We'll be in touch soon!</p>
+            <p>Our team will reach out to you using your preferred contact method.</p>
+          </div>
+        )}
+        {!estimateData.contactPreference && (
+          <div className="contact-buttons">
+            <a href={`tel:${BUSINESS_INFO.phone.primary}`} className="contact-phone-btn">
+              📞 Call: {BUSINESS_INFO.phone.primaryFormatted}
+            </a>
+            <a href={`mailto:${BUSINESS_INFO.email.primary}`} className="contact-email-btn">
+              ✉️ Email: {BUSINESS_INFO.email.primary}
+            </a>
+          </div>
+        )}
       </div>
+
+      {leadSaved && (
+        <div className="save-success-message">
+          <p>✅ Your request has been saved. We'll contact you soon!</p>
+        </div>
+      )}
+      {saveError && (
+        <div className="save-error-message">
+          <p>⚠️ There was an issue saving your request, but your estimate is ready. Please contact us directly.</p>
+        </div>
+      )}
 
       <div className="email-section">
         <div className="email-content">

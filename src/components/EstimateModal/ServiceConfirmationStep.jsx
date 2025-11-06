@@ -5,9 +5,11 @@ function ServiceConfirmationStep({
   updateEstimateData,
   onNext,
   onPrev,
+  addUserMessage,
+  addBotMessage,
 }) {
   const [identifiedService, setIdentifiedService] = useState(null);
-  const [urgency, setUrgency] = useState("normal");
+  const [urgency] = useState("normal");
 
   const serviceMap = {
     "AC not cooling at all": {
@@ -368,6 +370,26 @@ function ServiceConfirmationStep({
     }
   }, [estimateData.problem]);
 
+  const [sentServiceMsg, setSentServiceMsg] = useState(false)
+  const [autoAdvanced, setAutoAdvanced] = useState(false)
+
+  useEffect(() => {
+    if (identifiedService && !sentServiceMsg) {
+      if (addBotMessage) {
+        addBotMessage(`Recommended service: ${identifiedService.service}`)
+      }
+      // Save service with default urgency and auto-advance to next step
+      updateEstimateData({ service: { service: identifiedService, urgency: 'normal' } })
+      setSentServiceMsg(true)
+      if (!autoAdvanced) {
+        setTimeout(() => {
+          setAutoAdvanced(true)
+          onNext()
+        }, 500)
+      }
+    }
+  }, [identifiedService, sentServiceMsg, addBotMessage, autoAdvanced, onNext, updateEstimateData])
+
   const handleNext = () => {
     const serviceData = {
       service: identifiedService,
@@ -391,97 +413,8 @@ function ServiceConfirmationStep({
     return `$${newMin} - $${newMax}`;
   };
 
-  return (
-    <div className="service-confirmation-step">
-      <div className="step-header">
-        <h3>Recommended Service</h3>
-        <p>Based on your problem, here's what we recommend:</p>
-      </div>
-
-      {identifiedService && (
-        <div className="service-confirmation-card">
-          <div className="service-icon">{identifiedService.icon}</div>
-          <div className="service-details">
-            <h4>{identifiedService.service}</h4>
-            <p className="service-description">
-              {identifiedService.description}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="urgency-section">
-        <h4>How urgent is this issue?</h4>
-        <div className="urgency-options">
-          {[
-            {
-              value: "emergency",
-              label: "Emergency - Immediate assistance",
-              color: "#ef4444",
-            },
-            {
-              value: "urgent",
-              label: "Urgent - Within 24-48 hours",
-              color: "#f59e0b",
-            },
-            {
-              value: "normal",
-              label: "Normal - Can wait a few days",
-              color: "#3b82f6",
-            },
-            {
-              value: "scheduled",
-              label: "Scheduled - Plan for later",
-              color: "#10b981",
-            },
-          ].map((option) => (
-            <button
-              key={option.value}
-              className={`urgency-option ${
-                urgency === option.value ? "selected" : ""
-              }`}
-              onClick={() => {
-                setUrgency(option.value)
-                // Auto-advance to next step after selecting urgency
-                setTimeout(() => {
-                  handleNext()
-                }, 300)
-              }}
-              style={
-                urgency === option.value ? { borderColor: option.color } : {}
-              }
-            >
-              <div
-                className="urgency-indicator"
-                style={{ backgroundColor: option.color }}
-              ></div>
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="service-explanation">
-        <h4>Why this service?</h4>
-        <p>
-          Based on your described problem, our AI-powered system has identified
-          this as the most appropriate service. Our certified technicians will:
-        </p>
-        <ul>
-          <li>Diagnose the exact issue with your system</li>
-          <li>Provide a detailed explanation of the problem</li>
-          <li>Offer transparent pricing before any work begins</li>
-          <li>Complete the repair or installation professionally</li>
-        </ul>
-      </div>
-
-      <div className="step-actions">
-        <button className="step-button secondary" onClick={onPrev}>
-          ← Back
-        </button>
-      </div>
-    </div>
-  );
+  // No UI in chat mode; this step just posts a bot message and advances
+  return null;
 }
 
 export default ServiceConfirmationStep;

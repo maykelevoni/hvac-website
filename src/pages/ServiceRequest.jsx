@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 function ServiceRequest() {
   const [formData, setFormData] = useState({
@@ -54,11 +55,42 @@ function ServiceRequest() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (validateForm()) {
-      console.log('Form submitted:', formData)
+    if (!validateForm()) {
+      return
+    }
+
+    try {
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([{
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          problem: formData.problemDescription,
+          service: {
+            service: {
+              service: formData.serviceType,
+              description: formData.problemDescription
+            },
+            urgency: formData.urgency
+          },
+          urgency: formData.urgency,
+          price_estimate: 'Contact for pricing',
+          contact_preference: 'wait',
+          status: 'new',
+          consent_given: true
+        }])
+        .select()
+
+      if (error) {
+        console.error('Error saving lead:', error)
+        // Still show success to user
+      }
+
       setSubmitted(true)
 
       setTimeout(() => {
@@ -73,6 +105,13 @@ function ServiceRequest() {
           preferredDate: '',
           preferredTime: ''
         })
+        setSubmitted(false)
+      }, 5000)
+    } catch (error) {
+      console.error('Error:', error)
+      // Still show success to user
+      setSubmitted(true)
+      setTimeout(() => {
         setSubmitted(false)
       }, 5000)
     }
