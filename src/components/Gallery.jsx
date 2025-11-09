@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 function Gallery() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [selectedImage, setSelectedImage] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [galleryItems, setGalleryItems] = useState([])
+  const [loading, setLoading] = useState(true)
 
   const filters = [
     { id: 'all', label: 'All' },
@@ -15,18 +18,99 @@ function Gallery() {
     { id: 'air-quality', label: 'Air Quality' }
   ]
 
-  // Placeholder gallery items - in production, these would come from Supabase
-  const galleryItems = [
-    { id: 1, serviceType: 'cooling', imageUrl: 'https://picsum.photos/400/300?random=9', description: 'Central AC Installation' },
-    { id: 2, serviceType: 'cooling', imageUrl: 'https://picsum.photos/400/300?random=10', description: 'Mini Split System' },
-    { id: 3, serviceType: 'installation', imageUrl: 'https://picsum.photos/400/300?random=11', description: 'Professional Installation' },
-    { id: 4, serviceType: 'maintenance', imageUrl: 'https://picsum.photos/400/300?random=12', description: 'Routine Maintenance' },
-    { id: 5, serviceType: 'heating', imageUrl: 'https://picsum.photos/400/300?random=13', description: 'Heating System Repair' },
-    { id: 6, serviceType: 'air-quality', imageUrl: 'https://picsum.photos/400/300?random=14', description: 'Air Quality Improvement' },
-    { id: 7, serviceType: 'cooling', imageUrl: 'https://picsum.photos/400/300?random=15', description: 'AC Unit Replacement' },
-    { id: 8, serviceType: 'installation', imageUrl: 'https://picsum.photos/400/300?random=16', description: 'New System Installation' },
-    { id: 9, serviceType: 'maintenance', imageUrl: 'https://picsum.photos/400/300?random=17', description: 'System Tune-up' }
-  ]
+  // Fetch images from Supabase Storage
+  useEffect(() => {
+    fetchGalleryImages()
+  }, [])
+
+  const fetchGalleryImages = async () => {
+    try {
+      setLoading(true)
+
+      if (!supabase) {
+        throw new Error('Supabase client not initialized')
+      }
+
+      // Try listing files from root first
+      let { data: files, error: listError } = await supabase.storage
+        .from('job_photos')
+        .list('', {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' }
+        })
+
+      // If no files in root, try common folder names
+      if (!listError && (!files || files.length === 0)) {
+        const folderNames = ['images', 'photos', 'work', 'gallery', 'whatsapp']
+
+        for (const folder of folderNames) {
+          const { data: folderFiles, error: folderError } = await supabase.storage
+            .from('job_photos')
+            .list(folder, {
+              limit: 100,
+              offset: 0,
+              sortBy: { column: 'name', order: 'asc' }
+            })
+
+          if (!folderError && folderFiles && folderFiles.length > 0) {
+            // Prepend folder path to file names
+            files = folderFiles.map(f => ({ ...f, name: `${folder}/${f.name}` }))
+            break
+          }
+        }
+      }
+
+      if (listError) throw listError
+
+      if (!files || files.length === 0) {
+        setGalleryItems([])
+        return
+      }
+
+      // Filter image files
+      const imageFiles = files.filter(file =>
+        file.name &&
+        !file.name.startsWith('.') &&
+        file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      )
+
+      // Get public URLs for all images
+      const images = imageFiles.map((file, index) => {
+        const { data: { publicUrl } } = supabase.storage
+          .from('job_photos')
+          .getPublicUrl(file.name)
+
+        // Try to determine service type from filename or default to 'installation'
+        const fileName = file.name.toLowerCase()
+        let serviceType = 'installation'
+
+        if (fileName.includes('cool') || fileName.includes('ac')) serviceType = 'cooling'
+        else if (fileName.includes('heat') || fileName.includes('furnace')) serviceType = 'heating'
+        else if (fileName.includes('maintenance') || fileName.includes('tune')) serviceType = 'maintenance'
+        else if (fileName.includes('air') && fileName.includes('quality')) serviceType = 'air-quality'
+
+        return {
+          id: index + 1,
+          serviceType,
+          imageUrl: publicUrl,
+          description: file.name.replace(/\.(jpg|jpeg|png|gif|webp)$/i, '').replace(/_/g, ' ')
+        }
+      })
+
+      setGalleryItems(images)
+    } catch (error) {
+      console.error('Error fetching gallery images:', error)
+      // Fallback to placeholder if Supabase fails
+      setGalleryItems([
+        { id: 1, serviceType: 'cooling', imageUrl: 'https://picsum.photos/400/300?random=9', description: 'Central AC Installation' },
+        { id: 2, serviceType: 'cooling', imageUrl: 'https://picsum.photos/400/300?random=10', description: 'Mini Split System' },
+        { id: 3, serviceType: 'installation', imageUrl: 'https://picsum.photos/400/300?random=11', description: 'Professional Installation' }
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredItems = activeFilter === 'all'
     ? galleryItems
@@ -87,7 +171,11 @@ function Gallery() {
           ))}
         </div>
 
-        {filteredItems.length === 0 ? (
+        {loading ? (
+          <div className="gallery-loading">
+            <p>Loading gallery...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="gallery-empty">
             <p>No images found for this category.</p>
           </div>
